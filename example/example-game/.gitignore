@@ -1,0 +1,41 @@
+# Godot-specific generated files: 
+.godot/
+.import/
+*.import
+.uid
+*.gen.*
+compile_commands.json
+extension_api.json
+logs/
+
+# Build output: 
+bin/
+*.a
+*.dll
+*.so
+*.lib
+*.o
+*.os
+*.ox
+*.exe
+*.debug
+
+# IDE and editor files: 
+.idea/
+.vscode/
+.fleet/
+*.pydevproject
+*.launch
+*.user
+*.suo
+*.userosscache
+*.cproject
+*.settings/
+
+# OS-specific files: 
+.DS_Store
+__MACOSX/
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
