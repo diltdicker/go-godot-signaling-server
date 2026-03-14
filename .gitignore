@@ -1,0 +1,11 @@
+
+# zip files
+*.zip
+
+# python
+tests/venv
+tests/__pycache__
+tests/*.pyc
+
+# golang
+out

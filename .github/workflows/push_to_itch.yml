@@ -1,0 +1,30 @@
+name: Push Code to Itch 
+
+on:
+  workflow_dispatch:
+
+jobs:
+
+  zip-and-push-addon:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out the repo
+      uses: actions/checkout@v5
+    - name: zip
+      shell: bash
+      run: |
+        zip -r addons.zip godot/addons
+        mkdir -p deploy
+        mv addons.zip deploy
+    - name: push
+      uses: KikimoraGames/itch-publish@v0.0.3
+      with:
+        butlerApiKey: ${{ secrets.BUTLER_API_KEY }}
+        gameData: ./deploy
+        itchUsername: ${{ vars.ITCH_USERNAME }}
+        itchGameId: ${{ vars.ITCH_GAME_ID }}
+        buildChannel: plugin
+
+
+  
+
