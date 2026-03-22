@@ -198,15 +198,102 @@ func handleMessage(u *core.User, p []byte) (err error) {
 		}
 	case core.OFFER:
 		{
+			// validate input
+			if m.Data.Offer == nil || m.Data.ToId <= 0 || u.PeerId <= 0 {
+				u.SendMessage(core.ERR, ErrBadMessage)
+				return
+			}
+
+			peerId := m.Data.ToId
+			if m.Data.ToId == 1 {
+				if l, ok := registry.GetLobby(u.CurLobby); ok {
+					peerId = l.HostId
+				} else {
+					u.SendMessage(core.ERR, ErrLobbyMissing)
+					return
+				}
+			}
+
+			peer, ok := registry.GetUser(peerId)
+			if !ok {
+				u.SendMessage(core.ERR, ErrUnknownPeer)
+				return
+			}
+
+			if u.CurLobby != peer.CurLobby {
+				u.SendMessage(core.ERR, ErrLobbyMissing)
+				return
+			}
+
+			peer.SendMessage(core.OFFER, &core.WsDataMessage{Offer: m.Data.Offer, FromId: u.PeerId})
 
 		}
 	case core.ANSWER:
 		{
+			// validate input
+			if m.Data.Answer == nil || m.Data.ToId <= 0 || u.PeerId <= 0 {
+				u.SendMessage(core.ERR, ErrBadMessage)
+				return
+			}
 
+			peerId := m.Data.ToId
+			if m.Data.ToId == 1 {
+				if l, ok := registry.GetLobby(u.CurLobby); ok {
+					peerId = l.HostId
+				} else {
+					u.SendMessage(core.ERR, ErrLobbyMissing)
+					return
+				}
+			}
+
+			peer, ok := registry.GetUser(peerId)
+			if !ok {
+				u.SendMessage(core.ERR, ErrUnknownPeer)
+				return
+			}
+
+			if u.CurLobby != peer.CurLobby {
+				u.SendMessage(core.ERR, ErrLobbyMissing)
+				return
+			}
+
+			peer.SendMessage(core.ANSWER, &core.WsDataMessage{Answer: m.Data.Answer, FromId: u.PeerId})
 		}
 	case core.CANDIDATE:
 		{
+			// validate input
+			if m.Data.SDP == nil || m.Data.Media == nil || m.Data.Index == nil || m.Data.ToId <= 0 || u.PeerId <= 0 {
+				u.SendMessage(core.ERR, ErrBadMessage)
+				return
+			}
 
+			peerId := m.Data.ToId
+			if m.Data.ToId == 1 {
+				if l, ok := registry.GetLobby(u.CurLobby); ok {
+					peerId = l.HostId
+				} else {
+					u.SendMessage(core.ERR, ErrLobbyMissing)
+					return
+				}
+			}
+
+			peer, ok := registry.GetUser(peerId)
+			if !ok {
+				u.SendMessage(core.ERR, ErrUnknownPeer)
+				return
+			}
+
+			if u.CurLobby != peer.CurLobby {
+				u.SendMessage(core.ERR, ErrLobbyMissing)
+				return
+			}
+
+			peer.SendMessage(core.CANDIDATE, &core.WsDataMessage{
+				SDP:    m.Data.SDP,
+				Media:  m.Data.Media,
+				Index:  m.Data.Index,
+				FromId: u.PeerId,
+			})
 		}
 	case core.READY:
 		{

@@ -21,32 +21,33 @@ type ErrMessage struct {
 }
 
 type WsDataMessage struct {
-	// --- 24-BYTE FIELDS (Slices / json.RawMessage) ---
+	// --- 24-BYTE FIELDS (Slice headers: Data, Len, Cap) ---
 	Offer  json.RawMessage `json:"offer,omitempty"`
 	Answer json.RawMessage `json:"answer,omitempty"`
 	Media  json.RawMessage `json:"media,omitempty"`
 	SDP    json.RawMessage `json:"sdp,omitempty"`
 	Meta   json.RawMessage `json:"meta,omitempty"`
 
-	// --- 16-BYTE FIELDS (Strings) ---
+	// --- 16-BYTE FIELDS (String headers: Data, Len) ---
 	LobbyCode string `json:"lobbyCode,omitempty"`
 	GameId    string `json:"gameId,omitempty"`
 
-	// --- 8-BYTE FIELDS (Pointers & int64) ---
-	IsPublic   *bool `json:"isPublic,omitempty"`
-	IsMesh     *bool `json:"isMesh,omitempty"`
-	LobbyAlive *bool `json:"lobbyAlive,omitempty"`
-	IsHost     *bool `json:"isHost,omitempty"`
-	Index      int64 `json:"index,omitempty"`
+	// --- 8-BYTE FIELDS (Pointers and int64) ---
+	IsPublic   *bool  `json:"isPublic,omitempty"`
+	IsMesh     *bool  `json:"isMesh,omitempty"`
+	LobbyAlive *bool  `json:"lobbyAlive,omitempty"`
+	IsHost     *bool  `json:"isHost,omitempty"`
+	Index      *int32 `json:"index,omitempty"`
 
-	// --- 4-BYTE FIELDS (Packed together = 8 bytes) ---
+	// --- 4-BYTE FIELDS (Grouped to fill 8-byte slots) ---
 	Id     int32 `json:"id,omitempty"`
 	ToId   int32 `json:"toId,omitempty"`
+	FromId int32 `json:"fromId,omitempty"`
 	PeerId int32 `json:"peerId,omitempty"`
 
-	// --- 1-BYTE FIELDS ---
+	// --- 1-BYTE FIELDS (Grouped at the very end) ---
 	MaxPeers int8 `json:"maxPeers,omitempty"`
 
-	// PADDING: Go will automatically add 7 bytes here at the end
-	// to make the struct size a multiple of 8.
+	// Total Padding added by Go: ~7 bytes at the end to round to 8.
+	// Previous "Mixed" version likely had 16-24 bytes of internal padding.
 }
