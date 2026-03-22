@@ -4,7 +4,14 @@ on:
   workflow_dispatch:
 
 jobs:
-  push_to_registry:
+
+  push-demo-to-registry:
+    runs-on: ubuntu-latest
+
+  push-512-to-registry:
+    runs-on: ubuntu-latest
+
+  push-to-registry:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     if: |

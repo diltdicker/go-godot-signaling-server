@@ -1,99 +1,278 @@
 package main
 
 import (
-	"container/list"
-	"fmt"
+	"encoding/json"
+	"log/slog"
 	"net/http"
-	"sync"
-	"time"
+	"strings"
 
+	"github.com/diltdicker/go-godot-signaling-server/go/core"
+	"github.com/diltdicker/go-godot-signaling-server/go/utils"
 	"github.com/gorilla/websocket"
 )
 
-type Lobby struct {
-	Game      string
-	LobbyName string
-	ShortDesc string
-	LobbyCode string
-	LobbyType uint8
-	MaxPeers  uint8
-	IsMesh    bool
-	Tags      string
-	IsActive  bool
-	IsHidden  bool
-	PeerList  list.List
+// Constant Envs
+const memLimitKey = "GGSS_MEM_LIMIT"
+const idleKickKey = "GGSS_IDLE_KICK"
+const longKickKey = "GGSS_LONG_KICK"
+const maxUsersKey = "GGSS_MAX_USERS"
+
+// Global Envs
+var memLimit int   // maximum amount of memory in MiB for the Go process to use
+var idleKick int   // the amount of idle time to wait (seconds) before kicking user from the server
+var longKick int   // time to wait (seconds) before kicking user for being connected too long
+var maxUsers int64 // maximum number of concurrent users
+
+// Global Consts
+const maxLobbySize int8 = 16
+
+// Env read from system
+func init() {
+	memLimit = utils.GetEnvInt(memLimitKey, -1)    // default is off
+	idleKick = utils.GetEnvInt(idleKickKey, -1)    // default is off
+	longKick = utils.GetEnvInt(longKickKey, 60*60) // default is 60 minutes
 }
 
-type User struct {
-	Id       int
-	LobbyId  int
-	IsHost   bool
-	CurLobby Lobby
-	Socket   *websocket.Conn
-	Game     string
-}
-
+// Global Vars
 var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true },
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
+var idPool = utils.NewIdPool(2)
+var registry = core.NewRegistry()
+
+// Global Errors - optimization no new mem allocation for error messages
+var (
+	// Generic Protocol Errors
+	ErrBadProto   = &core.ErrMessage{ErrCode: int16(core.BadProtoCode), ErrReason: core.BadProtoMsg}
+	ErrBadMessage = &core.ErrMessage{ErrCode: int16(core.BadMsgCode), ErrReason: core.BadMsgMsg}
+	ErrUnknown    = &core.ErrMessage{ErrCode: int16(core.UnknownErrCode), ErrReason: core.UnknownErrMsg}
+
+	// Lobby & Peer Errors
+	ErrLobbyMissing = &core.ErrMessage{ErrCode: int16(core.LobbyMissingCode), ErrReason: core.LobbyMissingMsg}
+	ErrLobbyFull    = &core.ErrMessage{ErrCode: int16(core.LobbyFullCode), ErrReason: core.LobbyFullMsg}
+	ErrUnknownPeer  = &core.ErrMessage{ErrCode: int16(core.UnknownPeerCode), ErrReason: core.UnknownPeerMsg}
+
+	// Action Specific Errors
+	ErrBadView  = &core.ErrMessage{ErrCode: int16(core.BadViewCode), ErrReason: core.BadViewMsg}
+	ErrBadHost  = &core.ErrMessage{ErrCode: int16(core.BadHostCode), ErrReason: core.BadHostMsg}
+	ErrBadJoin  = &core.ErrMessage{ErrCode: int16(core.BadJoinCode), ErrReason: core.BadJoinMsg}
+	ErrBadQueue = &core.ErrMessage{ErrCode: int16(core.BadQueueCode), ErrReason: core.BadQueueMsg}
+
+	// State/Validation Errors
+	ErrGameMismatch = &core.ErrMessage{ErrCode: int16(core.GameMismatchCode), ErrReason: core.GameMismatchMsg}
+
+	// Connection Management
+	ErrIdleSocket = &core.ErrMessage{ErrCode: int16(core.IdleSocketCode), ErrReason: core.IdleSocketMSg}
+	ErrRateLimit  = &core.ErrMessage{ErrCode: int16(core.RateLimitCode), ErrReason: core.RateLimitMsg}
+	ErrServerBusy = &core.ErrMessage{ErrCode: int16(core.ServerBusyCode), ErrReason: core.ServerBusyMsg}
+)
+
+// Websocket Logic
+// ===============
+func handleMessage(u *core.User, p []byte) (err error) {
+	// marshal json to WsMessage
+	m := &core.WsRecieveMsg{}
+	if err := json.Unmarshal(p, m); err != nil {
+		slog.Error("Unable to unmarshal WsMessage from:", "user", u.Id)
+		u.SendMessage(core.ERR, ErrBadMessage)
+		return err
+	}
+
+	switch m.Code {
+	case core.ID:
+		{
+			gameId := strings.TrimSpace(m.Data.GameId)
+			if gameId == "" {
+				u.SendMessage(core.ERR, ErrBadMessage)
+				return
+			}
+			u.Mu.Lock()
+			u.GameId = gameId // assign user's game id to profile
+			u.Mu.Unlock()
+		}
+
+	case core.HOST:
+		{
+			// validate needed field zero values
+			if u.GameId == "" || m.Data.MaxPeers <= 0 || m.Data.MaxPeers > maxLobbySize ||
+				m.Data.IsPublic == nil || m.Data.IsMesh == nil {
+				u.SendMessage(core.ERR, ErrBadMessage)
+				return
+			}
+			l := registry.CreateAddLobby()
+
+			l.AddUser(u) // uses lock
+
+			l.Mu.Lock()
+			lobbyId := l.Id
+			l.HostId = u.Id
+			l.GameId = u.GameId
+			l.MaxPeers = m.Data.MaxPeers
+			l.Meta = m.Data.Meta // blind copy
+			if *m.Data.IsPublic == true {
+				l.LobbyType = core.PUBLIC
+			} else {
+				l.LobbyType = core.PRIVATE
+			}
+			l.IsMesh = *m.Data.IsMesh
+			l.Mu.Unlock()
+
+			u.Mu.Lock()
+			u.IsHost = true
+			u.CurLobby = lobbyId
+			u.PeerId = 1
+			u.Mu.Unlock()
+
+			resp := &core.WsDataMessage{
+				Id:        1,
+				LobbyCode: l.LobbyCode,
+				IsMesh:    &l.IsMesh,
+			}
+
+			u.SendMessage(core.HOST, resp)
+		}
+	case core.JOIN:
+		{
+			// validate inputs
+			if u.GameId == "" || m.Data.LobbyCode == "" {
+				u.SendMessage(core.ERR, ErrBadMessage)
+				return
+			}
+			lobbyId := utils.StringToId(m.Data.LobbyCode)
+			l, ok := registry.GetLobby(lobbyId)
+			if !ok {
+				u.SendMessage(core.ERR, ErrLobbyMissing)
+				return
+			}
+
+			l.Mu.Lock() // lobby lock
+			if u.GameId != l.GameId {
+				l.Mu.Unlock()
+				u.SendMessage(core.ERR, ErrGameMismatch)
+				return
+			}
+			if len(l.Peers) >= int(l.MaxPeers) {
+				l.Mu.Unlock()
+				u.SendMessage(core.ERR, ErrLobbyFull)
+				return
+			}
+
+			// Snapshot current peers before adding self (for the "ADD" loop)
+			peersSnapshot := make([]*core.User, len(l.Peers))
+			copy(peersSnapshot, l.Peers)
+			l.Peers = append(l.Peers, u) // add user to lobby
+
+			l.Mu.Unlock() // lobby unlock
+
+			u.Mu.Lock()
+			u.IsHost = false
+			u.CurLobby = lobbyId
+			u.PeerId = u.Id
+			u.Mu.Unlock()
+
+			resp := &core.WsDataMessage{
+				Id:        u.Id,
+				IsMesh:    &l.IsMesh,
+				LobbyCode: l.LobbyCode,
+			}
+
+			u.SendMessage(core.JOIN, resp)
+
+			// The Broadcast Loop
+			for _, peer := range peersSnapshot {
+
+				// Tell the existing peer about the NEW user
+				peer.SendMessage(core.ADD, &core.WsDataMessage{PeerId: u.Id})
+
+				// Tell the NEW user about the existing peer
+				u.SendMessage(core.ADD, &core.WsDataMessage{PeerId: peer.Id})
+			}
+		}
+	case core.QUEUE:
+		{
+
+		}
+	case core.VIEW:
+		{
+
+		}
+	case core.OFFER:
+		{
+
+		}
+	case core.ANSWER:
+		{
+
+		}
+	case core.CANDIDATE:
+		{
+
+		}
+	case core.READY:
+		{
+
+		}
+	case core.START:
+		{
+
+		}
+	}
+
+	return nil
 }
 
-var users = make(map[int]*User) // Global
-var userIdCounter int
-var mu sync.Mutex // mutex for thread safety
+// ===============
+
+// Websocket Server Code
+// =====================
 
 func handler(w http.ResponseWriter, r *http.Request) {
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		fmt.Println("Upgrade error:", err)
-		return
+		slog.Error("Upgrade error:", "error", err)
 	}
-	defer conn.Close()
-
-	// Create a new User
-	mu.Lock()
-	userIdCounter++
-	user := &User{
-		Id:     userIdCounter,
-		Socket: conn,
-		// Initialize other fields as needed (e.g., Game from query params)
+	// assign new client id
+	u := &core.User{
+		Id:       idPool.Borrow(),
+		CurLobby: -1,
+		Conn:     conn,
 	}
-	users[user.Id] = user
-	mu.Unlock()
+	registry.AddUser(u)
+	slog.Info("Client connected", "id", u.Id)
 
-	fmt.Println("Client connected!")
+	defer func() {
+		slog.Info("Cleaning up user", "id", u.Id)
 
-	// Set initial read deadline (e.g., 60 seconds from now)
-	conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		// This ensures the socket is closed even if we didn't break on an error
+		u.CloseConnection(registry)
 
-	// event loop
+		// Return the ID to the pool so it can be reused!
+		idPool.Return(u.Id)
+	}()
+
+	// server asks user which game id
+	u.SendMessage(core.ID, nil)
+
 	for {
 		messageType, p, err := conn.ReadMessage()
 		if err != nil {
-			fmt.Println("Read error: ", err)
-			// clean up disconnect
-			mu.Lock()
-			delete(users, user.Id)
-			mu.Unlock()
+			// Loop breaks here! Function exits, defers run.
 			break
 		}
 
-		// Reset deadline on activity
-		conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-
-		fmt.Printf("Recieved: %s\n", string(p))
-
-		if err := conn.WriteMessage(messageType, p); err != nil {
-			fmt.Println("write error:", err)
-			break
+		if messageType == websocket.TextMessage {
+			handleMessage(u, p)
 		}
 	}
-
 }
 
 func main() {
-	http.HandleFunc("/", handler)
-	fmt.Println("Server started on :8080")
+	// var _ = GetNextID(3499)
+	http.HandleFunc("/ws", handler)
+	// fmt.Println("Server started on :8080")
+	slog.Info("Server started")
 	http.ListenAndServe(":8080", nil)
+
+	// println(utils.GenLobbyCode(34543))
 }

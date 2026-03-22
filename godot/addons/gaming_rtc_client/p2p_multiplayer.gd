@@ -120,12 +120,12 @@ func disconnect_from_server() -> void:
 
 
 func _send_packets(protocol: int, data: Dictionary) -> void:
-	_websocket.send_text(JSON.stringify({"call": protocol, "data": data}))
+	_websocket.send_text(JSON.stringify({"code": protocol, "data": data}))
 
 
 func _handle_packets(raw_message: String) -> void:
 	var message: Dictionary = JSON.parse_string(raw_message)
-	var protocol: int = message['call']
+	var protocol: int = message['code']
 	var data: Dictionary = message['data']
 	
 	if protocol == _PROTOCOL.ID:
@@ -184,6 +184,10 @@ func _handle_packets(raw_message: String) -> void:
             # free public STUN servers:
             # -------------------------
             # - stun:stun.l.google.com:19302
+            # - stun:stun1.l.google.com:19302
+            # - stun:stun2.l.google.com:19302                                                                                                                              
+            # - stun:stun3.l.google.com:19302
+            # - stun:stun4.l.google.com:19302
             # - stun:stun.services.mozilla.com:3478
             # - stun:stun.cloudflare.com:3478
             # - stun:stun.openrelay.metered.ca:80
