@@ -28,22 +28,6 @@ func (l *Lobby) AddUser(u *User) {
 	l.Peers = append(l.Peers, u)
 }
 
-func (l *Lobby) KickUser(id int32) {
-	l.Mu.Lock()
-	defer l.Mu.Lock()
-
-	for i, u := range l.Peers {
-		if u.Id == id {
-			l.Peers[i] = l.Peers[len(l.Peers)-1]
-
-			l.Peers[len(l.Peers)-1] = nil
-
-			l.Peers = l.Peers[:len(l.Peers)-1]
-			return
-		}
-	}
-}
-
 func (l *Lobby) Destruct() {
 	l.Mu.Lock()
 	defer l.Mu.Unlock()
@@ -51,4 +35,37 @@ func (l *Lobby) Destruct() {
 	for i := range l.Peers {
 		l.Peers[i] = nil
 	}
+}
+
+// RemovePeer removes a user by ID and returns their PeerId and a slice of remaining peers.
+// We return these so the caller can broadcast the REMOVE message without holding the lock.
+func (l *Lobby) RemovePeer(userId int32) (peerId int32, remaining []*User, ok bool) {
+	l.Mu.Lock()
+	defer l.Mu.Unlock()
+
+	for i, p := range l.Peers {
+		if p.Id == userId {
+			peerId = p.PeerId // Capture the "Virtual ID" (1 or Global)
+
+			// --- SWAP AND POP (The Fastest Way) ---
+			lastIdx := len(l.Peers) - 1
+
+			// 1. Move the last person into the gap
+			l.Peers[i] = l.Peers[lastIdx]
+
+			// 2. CRITICAL: Null out the old last slot for the GC
+			// If you don't do this, the User stays in RAM forever!
+			l.Peers[lastIdx] = nil
+
+			// 3. Shrink the slice
+			l.Peers = l.Peers[:lastIdx]
+
+			// 4. Create a snapshot for the broadcast loop
+			remaining = make([]*User, len(l.Peers))
+			copy(remaining, l.Peers)
+
+			return peerId, remaining, true
+		}
+	}
+	return 0, nil, false
 }

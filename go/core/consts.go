@@ -9,7 +9,7 @@ const (
 	QUEUE                  // 3:QUEUE ([user] Initiates call to queue for a game. [server] Responds with peer id and lobby code)
 	VIEW                   // 4:VIEW ([user] Initiates call to get details of lobby(s). [server] responds with lobby details and peer count)
 	ADD                    // 5:ADD ([server] Initiates call to inform user of new peer connection)
-	KICK                   // 6:RM ([server] Initiates call to inform user of peer disconnecting or lobby deletion)
+	KICK                   // 6:RM ([server] Initiates call to inform user of peer disconnecting or lobby deletion. [user] initiates call with own id to signal intent to leave lobby)
 	OFFER                  // 7:OFFER ([user] Initiates rtc offer to be relayed to desired user in lobby. [server] Relays call to desired user tagging the sending user's peer id)
 	ANSWER                 // 8:ANSWER ([user] Initiates rtc answer to be relayed to desired user in lobby. [server] Relays call to desired user tagging the sending user's peer id)
 	CANDIDATE              // 9:CANDIDATE ([user] Initiates rtc candidate to be relayed to desired user in lobby. [server] Relays call to desired user tagging the sending user's peer id)
@@ -47,10 +47,10 @@ const (
 	IdleSocketMSg    string = "Idle socket connection for too long"
 	UnknownErrCode   uint16 = 4017
 	UnknownErrMsg    string = "Unknown error"
-	UnknownPeerCode  uint16 = 4003
+	UnknownPeerCode  uint16 = 4010
 	UnknownPeerMsg   string = "Unknown peer"
 
-	LobbyFullCode uint16 = 4029 // Mirrored from HTTP 429
+	LobbyFullCode uint16 = 4023
 	LobbyFullMsg  string = "Lobby is full"
 
 	GameMismatchCode uint16 = 4009 // Mirrored from HTTP 409
@@ -59,6 +59,9 @@ const (
 	ServerBusyCode uint16 = 5003 // Mirrored from HTTP 503 (Service Unavailable)
 	ServerBusyMsg  string = "Server at maximum capacity"
 
-	RateLimitCode uint16 = 4020
+	RateLimitCode uint16 = 4029
 	RateLimitMsg  string = "Message frequency too high (Rate Limited)"
+
+	NotAllowedCode uint16 = 4003
+	NotAllowedMsg  string = "Action not allowed"
 )

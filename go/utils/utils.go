@@ -26,7 +26,7 @@ func GenerateLobbyId() int64 {
 
 	// Uint64N is the new standard; it's type-safe and avoids
 	// the "modulo bias" that older random implementations had.
-	return int64(rand.Uint64N(uint64(maxLobbies)))
+	return int64(rand.Uint64N(uint64(maxLobbies)) + 1)
 }
 
 func IdToString(id int64) string {

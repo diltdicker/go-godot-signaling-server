@@ -20,6 +20,10 @@ type ErrMessage struct {
 	ErrCode   int16  // 2 bytes
 }
 
+type WsLobbyList struct {
+	LobbyList []WsDataMessage
+}
+
 type WsDataMessage struct {
 	// --- 24-BYTE FIELDS (Slice headers: Data, Len, Cap) ---
 	Offer  json.RawMessage `json:"offer,omitempty"`

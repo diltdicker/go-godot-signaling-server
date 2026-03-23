@@ -67,6 +67,24 @@ func (r *Registry) addLobby(l *Lobby) {
 	r.Lobbys[l.Id] = l
 }
 
+func (r *Registry) CreateLobby() (l *Lobby) {
+	id := utils.GenerateLobbyId()
+	for {
+		if _, ok := r.GetLobby(id); ok {
+			id = utils.GenerateLobbyId()
+		} else {
+			break
+		}
+	}
+	lo := &Lobby{
+		Id:        id,
+		LobbyCode: utils.IdToString(id),
+		Peers:     []*User{},
+		IsOpen:    true,
+	}
+	return lo
+}
+
 func (r *Registry) CreateAddLobby() (l *Lobby) {
 	id := utils.GenerateLobbyId()
 	for {

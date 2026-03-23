@@ -35,7 +35,9 @@ func init() {
 
 // Global Vars
 var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	ReadBufferSize:  1024, // Shrink to 1 KB
+	WriteBufferSize: 1024, // Shrink to 1 KB
+	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 var idPool = utils.NewIdPool(2)
 var registry = core.NewRegistry()
@@ -53,10 +55,11 @@ var (
 	ErrUnknownPeer  = &core.ErrMessage{ErrCode: int16(core.UnknownPeerCode), ErrReason: core.UnknownPeerMsg}
 
 	// Action Specific Errors
-	ErrBadView  = &core.ErrMessage{ErrCode: int16(core.BadViewCode), ErrReason: core.BadViewMsg}
-	ErrBadHost  = &core.ErrMessage{ErrCode: int16(core.BadHostCode), ErrReason: core.BadHostMsg}
-	ErrBadJoin  = &core.ErrMessage{ErrCode: int16(core.BadJoinCode), ErrReason: core.BadJoinMsg}
-	ErrBadQueue = &core.ErrMessage{ErrCode: int16(core.BadQueueCode), ErrReason: core.BadQueueMsg}
+	ErrBadView   = &core.ErrMessage{ErrCode: int16(core.BadViewCode), ErrReason: core.BadViewMsg}
+	ErrBadHost   = &core.ErrMessage{ErrCode: int16(core.BadHostCode), ErrReason: core.BadHostMsg}
+	ErrBadJoin   = &core.ErrMessage{ErrCode: int16(core.BadJoinCode), ErrReason: core.BadJoinMsg}
+	ErrBadQueue  = &core.ErrMessage{ErrCode: int16(core.BadQueueCode), ErrReason: core.BadQueueMsg}
+	ErrForbidden = &core.ErrMessage{ErrCode: int16(core.NotAllowedCode), ErrReason: core.NotAllowedMsg}
 
 	// State/Validation Errors
 	ErrGameMismatch = &core.ErrMessage{ErrCode: int16(core.GameMismatchCode), ErrReason: core.GameMismatchMsg}
@@ -294,6 +297,73 @@ func handleMessage(u *core.User, p []byte) (err error) {
 				Index:  m.Data.Index,
 				FromId: u.PeerId,
 			})
+		}
+	case core.KICK:
+		{
+			// validate input
+			if m.Data.Id == 0 {
+				u.SendMessage(core.ERR, ErrBadMessage)
+				return
+			}
+			l, ok := registry.GetLobby(u.CurLobby)
+			if !ok {
+				u.SendMessage(core.ERR, ErrLobbyMissing)
+				return
+			}
+
+			var t *core.User
+			var deleteLobby = false
+
+			if u.Id == m.Data.Id {
+				t = u // user is leaving lobby
+				if u.IsHost {
+					deleteLobby = true
+				}
+			} else {
+				if !u.IsHost {
+					u.SendMessage(core.ERR, ErrForbidden)
+					return
+				}
+				t, _ = registry.GetUser(m.Data.Id) // host is kicking other user
+			}
+
+			if t == nil || u.CurLobby != t.CurLobby {
+				u.SendMessage(core.ERR, ErrUnknownPeer)
+				return
+			}
+
+			// remove peer from lobby
+			peerId, remaining, _ := l.RemovePeer(t.Id)
+
+			if !t.IsHost && u.IsHost {
+				// force kick by host
+				t.SendMessage(core.KICK, &core.WsDataMessage{Id: t.Id, LobbyAlive: utils.BoolPtr(true)})
+			}
+
+			// update all users or the remmoved peer
+			for _, p := range remaining {
+				if deleteLobby {
+					p.SendMessage(core.KICK, &core.WsDataMessage{Id: peerId, LobbyAlive: utils.BoolPtr(false)})
+					p.Mu.Lock()
+					p.CurLobby = 0
+					p.IsHost = false
+					p.PeerId = 0
+					p.Mu.Unlock()
+				} else {
+					p.SendMessage(core.KICK, &core.WsDataMessage{Id: peerId, LobbyAlive: utils.BoolPtr(true)})
+				}
+			}
+
+			// update removed peer status
+			t.Mu.Lock()
+			t.CurLobby = 0
+			t.IsHost = false
+			t.PeerId = 0
+			t.Mu.Unlock()
+
+			if deleteLobby {
+				registry.DeleteLobby(l.Id)
+			}
 		}
 	case core.READY:
 		{
