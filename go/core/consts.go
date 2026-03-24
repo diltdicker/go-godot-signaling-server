@@ -17,6 +17,7 @@ const (
 	START                  // 11:START ([user] Initiates call to server to disable lobby and close all user connections)
 	ERR                    // 12:ERR ([server] Initiates call to inform user of server error)
 	UPDATE                 // 13:UPDATE ([host] Initiaties call to updated maxPeer count or Meta of the Lobby). [server] replies to all the non-hosts with updated maxPeer count and Meta
+	PING                   // 14:PING ([server] auto initiates call every 60 seconds. [user] sends back empty packet)
 )
 
 type MatchType int8

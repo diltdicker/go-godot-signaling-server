@@ -48,7 +48,7 @@ signal view_lobby_details(details_list: Array)
 ## Signal with server error data
 signal socket_error(err_code: int, err_message: String)
 
-enum _PROTOCOL {ID, HOST, JOIN, QUEUE, VIEW, ADD, KICK, OFFER, ANSWER, CANDIDATE, READY, START, ERR}
+enum _PROTOCOL {ID, HOST, JOIN, QUEUE, VIEW, ADD, KICK, OFFER, ANSWER, CANDIDATE, READY, START, ERR, UPDATE, PING}
 
 ## Specific game name profile for creating lobbies (in case server hosts mutliple different games).
 @export var game_name: String = ''
@@ -73,6 +73,9 @@ var _is_in_lobby: bool = false
 
 var _old_state: WebSocketPeer.State = WebSocketPeer.STATE_CLOSED
 
+# heartbeat timer
+var _ping_timer: Timer
+
 ## Godot High-level multiplayer API
 @onready var multiplayer_client: WebRTCMultiplayerPeer = WebRTCMultiplayerPeer.new()
 
@@ -81,12 +84,16 @@ func _ready() -> void:
 	multiplayer_client.connect("peer_connected", _peer_was_connected)
 	multiplayer_client.connect("peer_disconnected", _peer_was_disconnected)
 
+    # auto heartbeat
+    _setup_ping()
+
 
 func _process(_delta: float) -> void:
 	_websocket.poll()
 	var state = _websocket.get_ready_state()
 	if state != _old_state and state == WebSocketPeer.STATE_OPEN:
 		emit_signal("socket_connected")
+        
 	while state == WebSocketPeer.STATE_OPEN and _websocket.get_available_packet_count():
 		_handle_packets(_websocket.get_packet().get_string_from_utf8())
 	if state != _old_state and state == WebSocketPeer.STATE_CLOSED:
@@ -122,12 +129,22 @@ func disconnect_from_server() -> void:
 func _send_packets(protocol: int, data: Dictionary) -> void:
 	_websocket.send_text(JSON.stringify({"code": protocol, "data": data}))
 
+func _setup_ping():
+    _ping_timer = Timer.new()
+    _ping_timer.wait_time = 30.0 # Send every 30s to beat the 60s server limit
+    _ping_timer.autostart = true
+    _ping_timer.timeout.connect(_send_ping)
+    add_child(_ping_timer)
+
+func _send_ping() -> void:
+    if websocket_connected:
+        _send_packets(_PROTOCOL.PING, {}) #
 
 func _handle_packets(raw_message: String) -> void:
 	var message: Dictionary = JSON.parse_string(raw_message)
 	var protocol: int = message['code']
 	var data: Dictionary = message['data']
-	
+       
 	if protocol == _PROTOCOL.ID:
 		websocket_connected = true
 		if game_name == '':

@@ -89,6 +89,11 @@ func handleMessage(u *core.User, p []byte) (err error) {
 	}
 
 	switch m.Code {
+	case core.PING:
+		{
+			// do nothing
+
+		}
 	case core.ID:
 		{
 			gameId := strings.TrimSpace(m.Data.GameId)
@@ -474,8 +479,7 @@ func handleMessage(u *core.User, p []byte) (err error) {
 			u.SendMessage(core.ERR, ErrBadProto)
 		}
 	}
-
-	return nil
+	return nil // no err
 }
 
 // ===============
@@ -489,10 +493,30 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("Upgrade error:", "error", err)
 	}
+
+	// setting connection details
+	conn.SetReadLimit(32 * 1024)
+	conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		return nil
+	})
+
+	// Start a heartbeat ticker for this specific user
+	go func() {
+		ticker := time.NewTicker(25 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return // Trigger closure if ping fails
+			}
+		}
+	}()
+
 	// assign new client id
 	u := &core.User{
 		Id:       idPool.Borrow(),
-		CurLobby: -1,
+		CurLobby: 0,
 		Conn:     conn,
 	}
 	registry.AddUser(u)
@@ -501,10 +525,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		slog.Info("Cleaning up user", "id", u.Id)
 
-		// This ensures the socket is closed even if we didn't break on an error
-		u.CloseConnection(registry)
-
-		// Return the ID to the pool so it can be reused!
+		registry.DisconnectUser(u.Id)
 		idPool.Return(u.Id)
 	}()
 
