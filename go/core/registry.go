@@ -52,6 +52,60 @@ func (r *Registry) DeleteUser(id int32) {
 	delete(r.Users, id)
 }
 
+func (r *Registry) DisconnectUser(userId int32) {
+	// 1. Fetch user and remove from global registry immediately
+	// This prevents any new messages from being routed to a dying connection
+	r.mu.Lock()
+	u, ok := r.Users[userId]
+	if ok {
+		delete(r.Users, userId)
+	}
+	r.mu.Unlock()
+
+	if !ok {
+		return // User already gone
+	}
+
+	// 2. Cleanup Lobby State
+	if u.CurLobby != 0 {
+		if l, ok := r.GetLobby(u.CurLobby); ok {
+			// Use the thread-safe RemovePeer we built
+			peerId, remaining, removed := l.RemovePeer(u.Id)
+
+			if removed {
+				// If the user was the host, the lobby should likely die
+				if u.IsHost {
+					// Notify others the lobby is closing
+					for _, p := range remaining {
+						p.SendMessage(KICK, &WsDataMessage{
+							Id:         peerId,
+							LobbyAlive: utils.BoolPtr(false),
+						})
+						p.Mu.Lock()
+						p.CurLobby = 0
+						p.Mu.Unlock()
+					}
+					r.DeleteLobby(l.Id)
+				} else {
+					// Just notify others that this specific peer left
+					for _, p := range remaining {
+						p.SendMessage(KICK, &WsDataMessage{Id: peerId})
+					}
+				}
+			}
+		}
+	}
+
+	// 3. Final Resource Release
+	u.Mu.Lock()
+	if u.Conn != nil {
+		u.Conn.Close()
+	}
+	// Null out the connection to ensure GC can reclaim the websocket buffers
+	u.Conn = nil
+	u.Mu.Unlock()
+}
+
 func (r *Registry) GetLobby(id int64) (*Lobby, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

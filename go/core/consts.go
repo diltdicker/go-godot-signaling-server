@@ -16,6 +16,7 @@ const (
 	READY                  // 10:READY ([server] Initiates call to host to confirm all user connections. [user] Initiates call to server to send READY call to host (in case of not a queued lobby))
 	START                  // 11:START ([user] Initiates call to server to disable lobby and close all user connections)
 	ERR                    // 12:ERR ([server] Initiates call to inform user of server error)
+	UPDATE                 // 13:UPDATE ([host] Initiaties call to updated maxPeer count or Meta of the Lobby). [server] replies to all the non-hosts with updated maxPeer count and Meta
 )
 
 type MatchType int8

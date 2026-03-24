@@ -133,7 +133,7 @@ func _handle_packets(raw_message: String) -> void:
 		if game_name == '':
 			push_error("game_name not setup for server")
 		assert(!game_name == '')
-		_send_packets(_PROTOCOL.ID, {"game": game_name})
+		_send_packets(_PROTOCOL.ID, {"gameId": game_name})
 		
 	elif protocol == _PROTOCOL.HOST:
 		multiplayer_id = data['id']
@@ -225,7 +225,7 @@ func _handle_packets(raw_message: String) -> void:
 		
 	elif protocol == _PROTOCOL.READY:
 		if is_host:
-			if data['status'] == 'ready':
+			if data['goStatus'] == 'ready':
 				_host_connection_cnt += 1
 			else:
 				_send_packets(_PROTOCOL.READY, data)
@@ -239,9 +239,9 @@ func _handle_packets(raw_message: String) -> void:
 				if multiplayer_client.get_peer(p)['connected']:
 					c_cnt += 1
 			if p_cnt == c_cnt:
-				_send_packets(_PROTOCOL.READY, {"peerCount": p_cnt, "id": multiplayer_id, "status": "ready"})
+				_send_packets(_PROTOCOL.READY, {"maxPeers": p_cnt, "id": multiplayer_id, "goStatus": "ready"})
 			else:
-				_send_packets(_PROTOCOL.READY, {"peerCount": p_cnt, "id": multiplayer_id, "status": "not_ready"})
+				_send_packets(_PROTOCOL.READY, {"maxPeers": p_cnt, "id": multiplayer_id, "goStatus": "not_ready"})
 			
 			
 	elif protocol == _PROTOCOL.START:
@@ -250,7 +250,7 @@ func _handle_packets(raw_message: String) -> void:
 		
 	elif protocol == _PROTOCOL.ERR:
 		push_warning("recieved error from server: %s" % str(data))
-		emit_signal("socket_error", data['code'], data['reason'])
+		emit_signal("socket_error", data['errCode'], data['errReason'])
 		
 	else:
 		push_warning("unrecognized socket server PROTOCOL: %d" % protocol)
@@ -273,7 +273,7 @@ func join_lobby(lobby_code: String) -> void:
 		push_error('not connected to websocket server, use: "connect_to_server()"')
 	assert(websocket_connected)
 	if not _is_in_lobby:
-		_send_packets(_PROTOCOL.JOIN, {"game": game_name, "lobbyCode": lobby_code.to_upper()})
+		_send_packets(_PROTOCOL.JOIN, {"gameId": game_name, "lobbyCode": lobby_code.to_upper()})
 	else:
 		push_error('already in a lobby, use: "leave_lobby()" before trying to join a new lobby')
 
@@ -284,7 +284,7 @@ func host_lobby(max_peers: int, is_public: bool) -> void:
 		push_error('not connected to websocket server, use: "connect_to_server()"')
 	assert(websocket_connected)
 	if not _is_in_lobby:
-		_send_packets(_PROTOCOL.HOST, {"game": game_name, "maxPeers": max_peers, "isMesh": use_mesh, "isPublic": is_public})
+		_send_packets(_PROTOCOL.HOST, {"gameId": game_name, "maxPeers": max_peers, "isMesh": use_mesh, "isPublic": is_public})
 	else:
 		push_error('already in a lobby, use: "leave_lobby()" before trying to host a new lobby')
 
@@ -295,7 +295,7 @@ func join_queue(max_peers: int, tags: String) -> void:
 		push_error('not connected to websocket server, use: "connect_to_server():')
 	assert(websocket_connected)
 	if not _is_in_lobby:
-		_send_packets(_PROTOCOL.QUEUE, {"game": game_name, "maxPeers": max_peers, "tags": tags, "isMesh": use_mesh})
+		_send_packets(_PROTOCOL.QUEUE, {"gameId": game_name, "maxPeers": max_peers, "tags": tags, "isMesh": use_mesh})
 	else:
 		push_error('already in a lobby, use: "leave_lobby()" before trying to join a queue')
 
@@ -305,7 +305,7 @@ func view_lobbies() -> void:
 	if not websocket_connected:
 		push_error('not connected to websocket server, use: "connect_to_server()"')
 	assert(websocket_connected)
-	_send_packets(_PROTOCOL.VIEW, {"game": game_name})
+	_send_packets(_PROTOCOL.VIEW, {"gameId": game_name})
 
 
 ## method for getting lobby details -> will emit response as signal
@@ -314,7 +314,7 @@ func view_lobby(lobby_code: String) -> void:
 	if not websocket_connected:
 		push_error('not connected to websocket server, use: connect_to_server()')
 	assert(websocket_connected)
-	_send_packets(_PROTOCOL.VIEW, {"game": game_name, "lobbyCode": lobby_code.to_upper()})
+	_send_packets(_PROTOCOL.VIEW, {"gameId": game_name, "lobbyCode": lobby_code.to_upper()})
 
 
 ## method to initiate as host the game start -> will emit signal to confirm all clients are ready

@@ -1,10 +1,17 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org.
+//
+// Copyright (c) 2026 Dillon Dickerson
 package main
 
 import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
+	"time"
 
 	"github.com/diltdicker/go-godot-signaling-server/go/core"
 	"github.com/diltdicker/go-godot-signaling-server/go/utils"
@@ -368,10 +375,103 @@ func handleMessage(u *core.User, p []byte) (err error) {
 	case core.READY:
 		{
 
+			l, ok := registry.GetLobby(u.CurLobby)
+			if !ok {
+				u.SendMessage(core.ERR, ErrLobbyMissing)
+				return
+			}
+
+			if u.IsHost {
+				initId := m.Data.Id // can be zero
+
+				l.Mu.Lock() // lock the lobby
+
+				peerCount := int8(len(l.Peers) - 1)
+				var targets []*core.User
+
+				if initId == 0 { // initId was unset
+					// Broadcast to all non-hosts
+					for _, p := range l.Peers {
+						if !p.IsHost {
+							targets = append(targets, p)
+						}
+					}
+				} else { // initId was set
+					// Target a specific peer who joined late
+					for _, p := range l.Peers {
+						if p.Id == initId {
+							targets = append(targets, p)
+							break
+						}
+					}
+				}
+				l.Mu.Unlock()
+
+				// send the READY Message
+				// Handle the "Slight Delay" using a Goroutine
+				// We pass the targets and count to the goroutine
+				go func(peers []*core.User, count int8) {
+					time.Sleep(1 * time.Second) // delay to allow users to finish connecting
+					for _, p := range peers {
+						p.SendMessage(core.READY, &core.WsDataMessage{
+							Id:       p.PeerId,
+							MaxPeers: peerCount,
+						})
+					}
+				}(targets, peerCount)
+
+			} else {
+				// Case B: Peer signaling the Host
+
+				host, ok := registry.GetUser(l.HostId)
+				if ok && host.CurLobby == u.CurLobby {
+					// Forward the peer's ready status to the host
+					host.SendMessage(core.READY, m.Data)
+				}
+			}
 		}
 	case core.START:
 		{
+			l, ok := registry.GetLobby(u.CurLobby)
+			if !u.IsHost || !ok {
+				u.SendMessage(core.ERR, ErrForbidden)
+				return
+			}
 
+			l.Mu.Lock()
+			l.IsOpen = false
+			targets := make([]*core.User, len(l.Peers))
+			copy(targets, l.Peers)
+			l.Mu.Unlock()
+			slices.Reverse(targets) // host is now last
+
+			// Tell everyone to start game
+			for _, p := range targets {
+				if !p.IsHost {
+					p.SendMessage(core.START, nil)
+				}
+			}
+
+			time.Sleep(250 * time.Millisecond) // wait for everyone else to recieve START
+
+			u.SendMessage(core.START, nil)
+
+			// The Clean Exit
+			go func(lobbyId int64, players []*core.User) {
+				time.Sleep(500 * time.Millisecond) // Wait for WebRTC finalization
+				for _, p := range players {
+					registry.DisconnectUser(p.Id) // Atomic cleanup of everything
+				}
+				registry.DeleteLobby(lobbyId)
+			}(l.Id, targets)
+		}
+	case core.UPDATE:
+		{
+
+		}
+	default:
+		{
+			u.SendMessage(core.ERR, ErrBadProto)
 		}
 	}
 

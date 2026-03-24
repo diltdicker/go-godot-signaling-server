@@ -1,3 +1,8 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org.
+//
+// Copyright (c) 2026 Dillon Dickerson
 package core
 
 import (
@@ -16,8 +21,8 @@ type WsRecieveMsg struct {
 }
 
 type ErrMessage struct {
-	ErrReason string // 16 bytes
-	ErrCode   int16  // 2 bytes
+	ErrReason string `json:"errReason"` // 16 bytes
+	ErrCode   int16  `json:"errCode"`   // 2 bytes
 }
 
 type WsLobbyList struct {
@@ -35,6 +40,7 @@ type WsDataMessage struct {
 	// --- 16-BYTE FIELDS (String headers: Data, Len) ---
 	LobbyCode string `json:"lobbyCode,omitempty"`
 	GameId    string `json:"gameId,omitempty"`
+	GoStatus  string `json:"goStatus,omitempty"`
 
 	// --- 8-BYTE FIELDS (Pointers and int64) ---
 	IsPublic   *bool  `json:"isPublic,omitempty"`
