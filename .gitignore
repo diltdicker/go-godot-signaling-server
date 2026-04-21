@@ -9,3 +9,12 @@ tests/*.pyc
 
 # golang
 out
+
+# goodot
+**/override.cfg
+exports/linux/*
+!exports/linux/.gitkeep
+exports/windows/*
+!exports/windows/.gitkeep
+exports/web/*
+!exports/web/.gitkeep

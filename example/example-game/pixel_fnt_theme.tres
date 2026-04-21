@@ -1,0 +1,7 @@
+[gd_resource type="Theme" format=3 uid="uid://cf4as70rtc2oo"]
+
+[ext_resource type="FontFile" uid="uid://cmy176o5griia" path="res://hexabit-sans.ttf" id="1_h0wp7"]
+
+[resource]
+default_font = ExtResource("1_h0wp7")
+default_font_size = 9

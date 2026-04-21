@@ -1,15 +1,28 @@
-FROM golang:latest
+# Stage 1: The Build Environment
+FROM golang:alpine AS builder
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
-COPY go/go.mod go/go.sum ./
+ARG GO_DIR=go
 
-RUN go mod download
+COPY ${GO_DIR} .
 
-COPY ./go .
+RUN CGO_ENABLED=0 GOOS=linux go build -o rtc_server .
 
-RUN go build -v -o /usr/local/bin/app ./...
+# Stage 2: The Final Image
+FROM alpine:latest
 
-EXPOSE 10000
+# setup non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-CMD ["app"]
+WORKDIR /root/
+
+COPY --from=builder /app/rtc_server .
+
+RUN chown appuser:appgroup rtc_server
+
+USER appuser
+
+EXPOSE 8080
+
+CMD ["./rtc_server"]

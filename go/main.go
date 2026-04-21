@@ -88,6 +88,8 @@ func handleMessage(u *core.User, p []byte) (err error) {
 		return err
 	}
 
+	slog.Info("recieved msg:", "code", m.Code, "data", m.Data)
+
 	switch m.Code {
 	case core.PING:
 		{
@@ -203,7 +205,15 @@ func handleMessage(u *core.User, p []byte) (err error) {
 				u.SendMessage(core.ADD, &core.WsDataMessage{PeerId: peer.Id})
 			}
 		}
+		// Queue lobbies are effectively normal public lobbies that will auto-start when the lobby fill up
 	case core.QUEUE:
+		{
+
+		}
+	// Ongoing is different from queue in that the users never disconnect from lobby until the game ends (empty lobby)
+	// Ongoing lobbies are always public, game starts immediately with the first host and players join throughout the game
+	// Don't use mesh network -> needs a BACKUP call
+	case core.ONGOING:
 		{
 
 		}

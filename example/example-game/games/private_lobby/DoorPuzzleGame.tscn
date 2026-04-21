@@ -1,0 +1,62 @@
+[gd_scene format=3 uid="uid://h50w4wywjygq"]
+
+[ext_resource type="Script" uid="uid://dl8pkiw2tr0p2" path="res://games/private_lobby/door_puzzle_game.gd" id="1_kuh1e"]
+[ext_resource type="Script" uid="uid://c4m1fipdmuclj" path="res://addons/gaming_rtc_client/p2p_multiplayer.gd" id="1_sfe3p"]
+[ext_resource type="Theme" uid="uid://cf4as70rtc2oo" path="res://pixel_fnt_theme.tres" id="3_imto0"]
+
+[node name="DoorPuzzleGame" type="Node" unique_id=1804376550]
+script = ExtResource("1_kuh1e")
+
+[node name="PeerToPeerClient" type="Node" parent="." unique_id=1418151466]
+unique_name_in_owner = true
+script = ExtResource("1_sfe3p")
+game_name = "DoorPuzzleGame"
+metadata/_custom_type_script = "uid://c4m1fipdmuclj"
+
+[node name="GameMenu" type="CanvasLayer" parent="." unique_id=840997519]
+unique_name_in_owner = true
+
+[node name="MenuPanel" type="PanelContainer" parent="GameMenu" unique_id=2010606480]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("3_imto0")
+
+[node name="MenuVbox" type="VBoxContainer" parent="GameMenu/MenuPanel" unique_id=1176994753]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+
+[node name="Spacer1" type="Control" parent="GameMenu/MenuPanel/MenuVbox" unique_id=72415799]
+layout_mode = 2
+
+[node name="MenuTitle" type="Label" parent="GameMenu/MenuPanel/MenuVbox" unique_id=1141086920]
+layout_mode = 2
+text = "Door Puzzle"
+horizontal_alignment = 1
+
+[node name="Spacer2" type="Control" parent="GameMenu/MenuPanel/MenuVbox" unique_id=262494630]
+layout_mode = 2
+
+[node name="MenuHbox" type="HBoxContainer" parent="GameMenu/MenuPanel/MenuVbox" unique_id=1102134876]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="NewGameButton" type="Button" parent="GameMenu/MenuPanel/MenuVbox/MenuHbox" unique_id=509487373]
+layout_mode = 2
+text = "New Game"
+
+[node name="Spacer3" type="Label" parent="GameMenu/MenuPanel/MenuVbox" unique_id=914015323]
+layout_mode = 2
+
+[connection signal="socket_connected" from="PeerToPeerClient" to="." method="_on_peer_to_peer_client_socket_connected"]
+[connection signal="socket_disconnected" from="PeerToPeerClient" to="." method="_on_peer_to_peer_client_socket_disconnected"]
+[connection signal="socket_error" from="PeerToPeerClient" to="." method="_on_peer_to_peer_client_socket_error"]
+[connection signal="pressed" from="GameMenu/MenuPanel/MenuVbox/MenuHbox/NewGameButton" to="." method="_on_new_game_button_pressed"]

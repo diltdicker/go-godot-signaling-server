@@ -1,0 +1,225 @@
+[gd_scene format=3 uid="uid://dxs8tpw4sut11"]
+
+[ext_resource type="Script" uid="uid://b6i4c0vgd6ggl" path="res://games/private_lobby/private_multiplayer_menu.gd" id="1_0qjm6"]
+[ext_resource type="Theme" uid="uid://cf4as70rtc2oo" path="res://pixel_fnt_theme.tres" id="2_py1sy"]
+
+[sub_resource type="Theme" id="Theme_py1sy"]
+
+[node name="PrivateMultiplayerMenu" type="CanvasLayer" unique_id=756808657]
+script = ExtResource("1_0qjm6")
+
+[node name="MenuContainer" type="PanelContainer" parent="." unique_id=1495743538]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_py1sy")
+
+[node name="MenuVbox" type="VBoxContainer" parent="MenuContainer" unique_id=1456130855]
+custom_minimum_size = Vector2(165, 0)
+layout_mode = 2
+
+[node name="TitleHbox" type="HBoxContainer" parent="MenuContainer/MenuVbox" unique_id=201967017]
+layout_mode = 2
+
+[node name="TitleContainer" type="PanelContainer" parent="MenuContainer/MenuVbox/TitleHbox" unique_id=245733761]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TitleLabel" type="Label" parent="MenuContainer/MenuVbox/TitleHbox/TitleContainer" unique_id=2068469286]
+layout_mode = 2
+text = "  Private Multiplayer Game  "
+horizontal_alignment = 1
+
+[node name="ExitButton" type="Button" parent="MenuContainer/MenuVbox/TitleHbox" unique_id=1347353420]
+layout_mode = 2
+text = "Exit"
+
+[node name="ModeHbox" type="HBoxContainer" parent="MenuContainer/MenuVbox" unique_id=1903895209]
+layout_mode = 2
+
+[node name="HostPanelContainer" type="PanelContainer" parent="MenuContainer/MenuVbox/ModeHbox" unique_id=1324026114]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = SubResource("Theme_py1sy")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MenuContainer/MenuVbox/ModeHbox/HostPanelContainer" unique_id=138888633]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="HostCheckButton" type="CheckButton" parent="MenuContainer/MenuVbox/ModeHbox/HostPanelContainer/HBoxContainer" unique_id=1125859687]
+unique_name_in_owner = true
+layout_mode = 2
+button_pressed = true
+text = "Host"
+
+[node name="JoinPanelContainer" type="PanelContainer" parent="MenuContainer/MenuVbox/ModeHbox" unique_id=2093539636]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MenuContainer/MenuVbox/ModeHbox/JoinPanelContainer" unique_id=557201893]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="JoinCheckButton" type="CheckButton" parent="MenuContainer/MenuVbox/ModeHbox/JoinPanelContainer/HBoxContainer" unique_id=1185020742]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Join"
+
+[node name="HostVbox" type="VBoxContainer" parent="MenuContainer/MenuVbox" unique_id=1329754475]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="MaxPlayerHbox" type="HBoxContainer" parent="MenuContainer/MenuVbox/HostVbox" unique_id=1060549443]
+layout_mode = 2
+
+[node name="MaxPlayerLabel" type="Label" parent="MenuContainer/MenuVbox/HostVbox/MaxPlayerHbox" unique_id=1102866733]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Max Players:"
+horizontal_alignment = 2
+
+[node name="MaxPlayerSpin" type="SpinBox" parent="MenuContainer/MenuVbox/HostVbox/MaxPlayerHbox" unique_id=920761218]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 2.0
+max_value = 4.0
+value = 3.0
+rounded = true
+alignment = 1
+
+[node name="PlayerCountHbox" type="HBoxContainer" parent="MenuContainer/MenuVbox/HostVbox" unique_id=985170942]
+layout_mode = 2
+
+[node name="PlayerCountLabel" type="Label" parent="MenuContainer/MenuVbox/HostVbox/PlayerCountHbox" unique_id=1408215515]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Players in Lobby:"
+horizontal_alignment = 2
+
+[node name="HostCurrentPlayerCount" type="Label" parent="MenuContainer/MenuVbox/HostVbox/PlayerCountHbox" unique_id=326925357]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HostCodeHbox" type="HBoxContainer" parent="MenuContainer/MenuVbox/HostVbox" unique_id=1945229036]
+layout_mode = 2
+
+[node name="HostCodeLabel" type="Label" parent="MenuContainer/MenuVbox/HostVbox/HostCodeHbox" unique_id=1349239532]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "HostCode:"
+horizontal_alignment = 2
+
+[node name="HostCodeEdit" type="LineEdit" parent="MenuContainer/MenuVbox/HostVbox/HostCodeHbox" unique_id=930932118]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+max_length = 8
+editable = false
+expand_to_text_length = true
+
+[node name="HostActionsHbox" type="HBoxContainer" parent="MenuContainer/MenuVbox/HostVbox" unique_id=2037769614]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="HostCancelButton" type="Button" parent="MenuContainer/MenuVbox/HostVbox/HostActionsHbox" unique_id=458553313]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Stop Hosting"
+
+[node name="HostButton" type="Button" parent="MenuContainer/MenuVbox/HostVbox/HostActionsHbox" unique_id=1323380884]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Host Lobby"
+
+[node name="StartButton" type="Button" parent="MenuContainer/MenuVbox/HostVbox/HostActionsHbox" unique_id=1502979236]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Start Game"
+
+[node name="JoinVbox" type="VBoxContainer" parent="MenuContainer/MenuVbox" unique_id=1527126545]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="JoinCodeHbox" type="HBoxContainer" parent="MenuContainer/MenuVbox/JoinVbox" unique_id=1584258068]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+
+[node name="JoinCodeLabel" type="Label" parent="MenuContainer/MenuVbox/JoinVbox/JoinCodeHbox" unique_id=293464479]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Join Code:"
+horizontal_alignment = 2
+
+[node name="JoinCodeEdit" type="LineEdit" parent="MenuContainer/MenuVbox/JoinVbox/JoinCodeHbox" unique_id=941499854]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+max_length = 8
+
+[node name="PlayerCountHbox" type="HBoxContainer" parent="MenuContainer/MenuVbox/JoinVbox" unique_id=1865361820]
+layout_mode = 2
+
+[node name="PlayerCountLabel" type="Label" parent="MenuContainer/MenuVbox/JoinVbox/PlayerCountHbox" unique_id=746290385]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Players in Lobby:"
+horizontal_alignment = 2
+
+[node name="JoinCurrentPlayerCount" type="Label" parent="MenuContainer/MenuVbox/JoinVbox/PlayerCountHbox" unique_id=1679960927]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="StatusHbox" type="HBoxContainer" parent="MenuContainer/MenuVbox/JoinVbox" unique_id=1003826846]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+
+[node name="StatusLabel" type="Label" parent="MenuContainer/MenuVbox/JoinVbox/StatusHbox" unique_id=1757285051]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Status:"
+horizontal_alignment = 2
+
+[node name="JoinStatusLabel" type="Label" parent="MenuContainer/MenuVbox/JoinVbox/StatusHbox" unique_id=805299472]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="JoinActionHbox" type="HBoxContainer" parent="MenuContainer/MenuVbox/JoinVbox" unique_id=122061844]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="JoinCancelButton" type="Button" parent="MenuContainer/MenuVbox/JoinVbox/JoinActionHbox" unique_id=816839185]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Leave Lobby"
+
+[node name="JoinButton" type="Button" parent="MenuContainer/MenuVbox/JoinVbox/JoinActionHbox" unique_id=1590346630]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Join Game"
+
+[node name="Empty" type="Control" parent="MenuContainer/MenuVbox" unique_id=984490513]
+layout_mode = 2
+
+[connection signal="pressed" from="MenuContainer/MenuVbox/TitleHbox/ExitButton" to="." method="_on_exit_button_pressed"]
+[connection signal="pressed" from="MenuContainer/MenuVbox/ModeHbox/HostPanelContainer/HBoxContainer/HostCheckButton" to="." method="_on_host_check_button_pressed"]
+[connection signal="pressed" from="MenuContainer/MenuVbox/ModeHbox/JoinPanelContainer/HBoxContainer/JoinCheckButton" to="." method="_on_join_check_button_pressed"]
+[connection signal="pressed" from="MenuContainer/MenuVbox/HostVbox/HostActionsHbox/HostCancelButton" to="." method="_on_host_cancel_button_pressed"]
+[connection signal="pressed" from="MenuContainer/MenuVbox/HostVbox/HostActionsHbox/HostButton" to="." method="_on_host_button_pressed"]
+[connection signal="pressed" from="MenuContainer/MenuVbox/HostVbox/HostActionsHbox/StartButton" to="." method="_on_start_button_pressed"]
+[connection signal="pressed" from="MenuContainer/MenuVbox/JoinVbox/JoinActionHbox/JoinCancelButton" to="." method="_on_join_cancel_button_pressed"]
+[connection signal="pressed" from="MenuContainer/MenuVbox/JoinVbox/JoinActionHbox/JoinButton" to="." method="_on_join_button_pressed"]

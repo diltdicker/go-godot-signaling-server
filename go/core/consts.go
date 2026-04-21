@@ -18,6 +18,8 @@ const (
 	ERR                    // 12:ERR ([server] Initiates call to inform user of server error)
 	UPDATE                 // 13:UPDATE ([host] Initiaties call to updated maxPeer count or Meta of the Lobby). [server] replies to all the non-hosts with updated maxPeer count and Meta
 	PING                   // 14:PING ([server] auto initiates call every 60 seconds. [user] sends back empty packet)
+	ONGOING                // 15:ONGOING ([user] Initiates call to join an ongoing Lobby. [server] responds with peer id and lobby code - if peer id == 1 user will be started on a new lobby)
+	BACKUP                 // 16:BACKUP ([host] Heartbeat call to sync to lobby the game state in case of host migration. [server] informing user that host has dropped and that they are being declared the new host)
 )
 
 type MatchType int8

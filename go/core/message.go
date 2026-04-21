@@ -11,13 +11,13 @@ import (
 
 // u.SendMessage(CODE_LOBBY, &WsDataMessage{ Id: 123 })
 type WsSendMsg struct {
-	Data any   // 16 bytes (Interface header)
-	Code MCode // 2-4 bytes (depending on MCode type)
+	Data any   `json:"data"` // 16 bytes (Interface header)
+	Code MCode `json:"code"` // 2-4 bytes (depending on MCode type)
 }
 
 type WsRecieveMsg struct {
-	Data WsDataMessage // Large (Size of WsDataMessage)
-	Code MCode         // 2-4 bytes
+	Data WsDataMessage `json:"data"` // Large (Size of WsDataMessage)
+	Code MCode         `json:"code"` // 2-4 bytes
 }
 
 type ErrMessage struct {
@@ -36,6 +36,7 @@ type WsDataMessage struct {
 	Media  json.RawMessage `json:"media,omitempty"`
 	SDP    json.RawMessage `json:"sdp,omitempty"`
 	Meta   json.RawMessage `json:"meta,omitempty"`
+	Backup json.RawMessage `json:"backup,omitempty"`
 
 	// --- 16-BYTE FIELDS (String headers: Data, Len) ---
 	LobbyCode string `json:"lobbyCode,omitempty"`
@@ -47,6 +48,7 @@ type WsDataMessage struct {
 	IsMesh     *bool  `json:"isMesh,omitempty"`
 	LobbyAlive *bool  `json:"lobbyAlive,omitempty"`
 	IsHost     *bool  `json:"isHost,omitempty"`
+	IsOnGoing  *bool  `json:"isOnGoing,omitempty"`
 	Index      *int32 `json:"index,omitempty"`
 
 	// --- 4-BYTE FIELDS (Grouped to fill 8-byte slots) ---

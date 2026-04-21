@@ -7,6 +7,7 @@ import (
 
 type Lobby struct {
 	Meta      json.RawMessage
+	Backup    json.RawMessage
 	Mu        sync.RWMutex // 24 bytes
 	Peers     []*User      // 24 bytes
 	LobbyCode string       // 16 bytes
@@ -18,6 +19,7 @@ type Lobby struct {
 	MaxPeers  int8
 	IsMesh    bool
 	IsOpen    bool
+	IsOngoing bool
 	// If MatchType is 4 bytes, Go adds 4 bytes of padding here.
 }
 
@@ -68,4 +70,18 @@ func (l *Lobby) RemovePeer(userId int32) (peerId int32, remaining []*User, ok bo
 		}
 	}
 	return 0, nil, false
+}
+
+
+func (l *Lobby) UpdateBackup(newData []byte) {
+    l.Mu.Lock()
+    defer l.Mu.Unlock()
+    
+    // Efficient reuse of the existing slice capacity
+    if cap(l.Backup) >= len(newData) {
+        l.Backup = l.Backup[:len(newData)]
+        copy(l.Backup, newData)
+    } else {
+        l.Backup = json.RawMessage(newData)
+    }
 }

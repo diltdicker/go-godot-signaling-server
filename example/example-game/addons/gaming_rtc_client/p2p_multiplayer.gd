@@ -54,7 +54,7 @@ enum _PROTOCOL {ID, HOST, JOIN, QUEUE, VIEW, ADD, KICK, OFFER, ANSWER, CANDIDATE
 @export var game_name: String = ''
 
 ## Preference for peer to peer game hosting connection
-@export var use_mesh: bool = true
+@export var use_mesh: bool = false
 
 @onready var _websocket: WebSocketPeer = WebSocketPeer.new()
 
@@ -120,20 +120,23 @@ func disconnect_from_server() -> void:
 
 
 func _send_packets(protocol: int, data: Dictionary) -> void:
-	_websocket.send_text(JSON.stringify({"call": protocol, "data": data}))
+	_websocket.send_text(JSON.stringify({"code": protocol, "data": data}))
 
 
 func _handle_packets(raw_message: String) -> void:
 	var message: Dictionary = JSON.parse_string(raw_message)
-	var protocol: int = message['call']
-	var data: Dictionary = message['data']
+	print(raw_message)
+	var protocol: int = message['code']
+	var data: Dictionary = {}
+	if message.has("data") and message["data"] != null:
+		data = message["data"]
 	
 	if protocol == _PROTOCOL.ID:
 		websocket_connected = true
 		if game_name == '':
 			push_error("game_name not setup for server")
 		assert(!game_name == '')
-		_send_packets(_PROTOCOL.ID, {"game": game_name})
+		_send_packets(_PROTOCOL.ID, {"gameId": game_name})
 		
 	elif protocol == _PROTOCOL.HOST:
 		multiplayer_id = data['id']
@@ -181,16 +184,16 @@ func _handle_packets(raw_message: String) -> void:
 		if peerId != multiplayer_id:
 			var rtc_conn: WebRTCPeerConnection = WebRTCPeerConnection.new()
 
-            # free public STUN servers:
-            # -------------------------
-            # - stun:stun.l.google.com:19302
-            # - stun:stun.services.mozilla.com:3478
-            # - stun:stun.cloudflare.com:3478
-            # - stun:stun.openrelay.metered.ca:80
-            # - stun:stun.nextcloud.com:3478
-            # -------------------------
-            # - stun:stun.relay.metered.ca:80
-            # -------------------------
+			# free public STUN servers:
+			# -------------------------
+			# - stun:stun.l.google.com:19302
+			# - stun:stun.services.mozilla.com:3478
+			# - stun:stun.cloudflare.com:3478
+			# - stun:stun.openrelay.metered.ca:80
+			# - stun:stun.nextcloud.com:3478
+			# -------------------------
+			# - stun:stun.relay.metered.ca:80
+			# -------------------------
 			rtc_conn.initialize({
 				"iceServers": [
 					{ "urls": "stun:stun.relay.metered.ca:80"}
@@ -246,7 +249,7 @@ func _handle_packets(raw_message: String) -> void:
 		
 	elif protocol == _PROTOCOL.ERR:
 		push_warning("recieved error from server: %s" % str(data))
-		emit_signal("socket_error", data['code'], data['reason'])
+		emit_signal("socket_error", data['errCode'], data['errReason'])
 		
 	else:
 		push_warning("unrecognized socket server PROTOCOL: %d" % protocol)
